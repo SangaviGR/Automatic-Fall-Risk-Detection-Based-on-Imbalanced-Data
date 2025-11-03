@@ -119,6 +119,92 @@ class FeatureExtractor:
         except:
             return np.nan
     
+    def calculate_six_deflection_angles(self, keypoints: Dict) -> Dict[str, float]:
+        """
+        Calculate the six deflection angles as mentioned in the paper:
+        - Spine deflection
+        - Waist deflection  
+        - Right Thigh deflection
+        - Left Thigh deflection
+        - Right Calf deflection
+        - Left Calf deflection
+        
+        Using Equation (8): cos⁻¹((Body · Gravity) / (|Body| × |Gravity|))
+        """
+        deflection_angles = {}
+        
+        # Gravity vector (vertical downward direction)
+        gravity_vector = np.array([0, 1])
+        
+        try:
+            # 1. Spine deflection (Keypoint 1 to 8: Neck to Mid Hip)
+            if 1 in keypoints and 8 in keypoints:
+                spine_vector = np.array([
+                    keypoints[8][0] - keypoints[1][0],
+                    keypoints[8][1] - keypoints[1][1]
+                ])
+                deflection_angles['spine_deflection'] = self.calculate_deflection_angle(spine_vector, gravity_vector)
+            else:
+                deflection_angles['spine_deflection'] = np.nan
+            
+            # 2. Waist deflection (Keypoint 9 to 12: Left Hip to Right Hip)
+            if 9 in keypoints and 12 in keypoints:
+                waist_vector = np.array([
+                    keypoints[12][0] - keypoints[9][0],
+                    keypoints[12][1] - keypoints[9][1]
+                ])
+                deflection_angles['waist_deflection'] = self.calculate_deflection_angle(waist_vector, gravity_vector)
+            else:
+                deflection_angles['waist_deflection'] = np.nan
+            
+            # 3. Right Thigh deflection (Keypoint 9 to 10: Right Hip to Right Knee)
+            if 9 in keypoints and 10 in keypoints:
+                right_thigh_vector = np.array([
+                    keypoints[10][0] - keypoints[9][0],
+                    keypoints[10][1] - keypoints[9][1]
+                ])
+                deflection_angles['right_thigh_deflection'] = self.calculate_deflection_angle(right_thigh_vector, gravity_vector)
+            else:
+                deflection_angles['right_thigh_deflection'] = np.nan
+            
+            # 4. Left Thigh deflection (Keypoint 12 to 13: Left Hip to Left Knee)
+            if 12 in keypoints and 13 in keypoints:
+                left_thigh_vector = np.array([
+                    keypoints[13][0] - keypoints[12][0],
+                    keypoints[13][1] - keypoints[12][1]
+                ])
+                deflection_angles['left_thigh_deflection'] = self.calculate_deflection_angle(left_thigh_vector, gravity_vector)
+            else:
+                deflection_angles['left_thigh_deflection'] = np.nan
+            
+            # 5. Right Calf deflection (Keypoint 10 to 11: Right Knee to Right Ankle)
+            if 10 in keypoints and 11 in keypoints:
+                right_calf_vector = np.array([
+                    keypoints[11][0] - keypoints[10][0],
+                    keypoints[11][1] - keypoints[10][1]
+                ])
+                deflection_angles['right_calf_deflection'] = self.calculate_deflection_angle(right_calf_vector, gravity_vector)
+            else:
+                deflection_angles['right_calf_deflection'] = np.nan
+            
+            # 6. Left Calf deflection (Keypoint 13 to 14: Left Knee to Left Ankle)
+            if 13 in keypoints and 14 in keypoints:
+                left_calf_vector = np.array([
+                    keypoints[14][0] - keypoints[13][0],
+                    keypoints[14][1] - keypoints[13][1]
+                ])
+                deflection_angles['left_calf_deflection'] = self.calculate_deflection_angle(left_calf_vector, gravity_vector)
+            else:
+                deflection_angles['left_calf_deflection'] = np.nan
+                
+        except:
+            # If any calculation fails, set all to NaN
+            for angle_name in ['spine_deflection', 'waist_deflection', 'right_thigh_deflection', 
+                              'left_thigh_deflection', 'right_calf_deflection', 'left_calf_deflection']:
+                deflection_angles[angle_name] = np.nan
+        
+        return deflection_angles
+    
     def calculate_body_tilt_angle(self, keypoints: Dict) -> float:
         """Calculate body tilt angle as in equation (9)"""
         try:
@@ -182,7 +268,23 @@ class FeatureExtractor:
         features['neck_acceleration'] = neck_acc
         features['hip_acceleration'] = hip_acc
         
-        # Deflection and tilt features
+        # Six deflection angle features (NEW - as per paper)
+        deflection_angles = self.calculate_six_deflection_angles(keypoints)
+        features.update(deflection_angles)
+        
+        # Body tilt angle feature
         features['body_tilt_angle'] = self.calculate_body_tilt_angle(keypoints)
         
         return features
+
+    def get_feature_names(self) -> List[str]:
+        """Return the complete list of feature names for reference"""
+        return [
+            'hw_ratio', 'spine_ratio',                    # Ratio features (2)
+            'neck_to_feet_dist', 'hip_to_feet_dist',      # Distance features (2)  
+            'head_acceleration', 'neck_acceleration', 'hip_acceleration',  # Acceleration features (3)
+            'spine_deflection', 'waist_deflection',       # Deflection angles (6)
+            'right_thigh_deflection', 'left_thigh_deflection',
+            'right_calf_deflection', 'left_calf_deflection',
+            'body_tilt_angle'                             # Tilt angle (1)
+        ]
