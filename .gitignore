@@ -1,0 +1,28 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+venv/
+.venv/
+
+# Data
+data/raw/
+data/processed/
+data/labels/
+
+# Models
+models/
+*.joblib
+
+# IDE files
+.vscode/
+.idea/
+
+# Logs
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
