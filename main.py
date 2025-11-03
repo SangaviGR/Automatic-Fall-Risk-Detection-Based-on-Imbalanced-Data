@@ -1,40 +1,34 @@
-import argparse
-import yaml
 from src.data_preprocessing import DataPreprocessor
-from src.feature_extraction import FeatureExtractor
-from src.pose_estimation import PoseEstimator
 from src.model_training import ModelTrainer
 from src.evaluation import ModelEvaluator
 
-def load_config(config_path):
-    with open(config_path, 'r') as file:
-        return yaml.safe_load(file)
-
 def main():
-    parser = argparse.ArgumentParser(description='Fall Detection System')
-    parser.add_argument('--config', type=str, default='config/config.yaml', help='Path to config file')
-    parser.add_argument('--mode', type=str, choices=['train', 'test', 'extract_features'], required=True)
-    args = parser.parse_args()
+    # Load configuration
+    config = {
+        'knn': {'n_neighbors': 5, 'weights': 'uniform'},
+        'svm': {'C': 1.0, 'kernel': 'rbf'},
+        'adaboost': {'n_estimators': 50},
+        'xgboost': {'n_estimators': 100, 'max_depth': 6}
+    }
     
-    config = load_config(args.config)
+    # Initialize components
+    preprocessor = DataPreprocessor(config)
+    trainer = ModelTrainer(config)
+    evaluator = ModelEvaluator(config)
     
-    if args.mode == 'extract_features':
-        # Extract features from videos (requires datasets)
-        pose_estimator = PoseEstimator(config)
-        feature_extractor = FeatureExtractor(config)
-        
-        # This part requires datasets - placeholder for your partner
-        print("Feature extraction requires datasets. Please implement this part when datasets are available.")
-        
-    elif args.mode == 'train':
-        # Train models with extracted features
-        trainer = ModelTrainer(config)
-        trainer.train_models()
-        
-    elif args.mode == 'test':
-        # Evaluate models
-        evaluator = ModelEvaluator(config)
-        evaluator.evaluate_models()
+    # Load and preprocess data
+    X, y = preprocessor.load_and_preprocess_data()
+    
+    # Train with SMOTE (as per paper)
+    X_test, y_test = trainer.train_with_sampling(X, y)
+    
+    # Evaluate models
+    results = evaluator.evaluate_all_models(
+        trainer.classifier, X_test, y_test
+    )
+    
+    # Generate reports
+    evaluator.generate_paper_comparison(results)
 
 if __name__ == "__main__":
     main()
